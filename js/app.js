@@ -224,10 +224,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // Synthèse Vocale
+// Synthèse Vocale avec correction phonétique
 function parler(texte) {
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel(); // Coupe l'audio précédent si besoin
-        const msg = new SpeechSynthesisUtterance(texte);
+        
+        // On triche pour que le robot français prononce bien l'anglais !
+        let textePhonetique = texte
+            .replace(/Jab/g, "Djab")
+            .replace(/Cross/g, "Crosse")
+            .replace(/Uppercut/g, "Opeurcute");
+
+        const msg = new SpeechSynthesisUtterance(textePhonetique);
         msg.lang = 'fr-FR'; 
         msg.rate = 1.1; // Débit un peu plus rapide pour le sport
         window.speechSynthesis.speak(msg);
