@@ -211,3 +211,153 @@ window.validerFeedback = async function() {
     
     showScreen("homeScreen");
 }
+
+let listeCombos = [];
+let boxeState = { timer: null, rounds: 0, currentRound: 1, currentInterval: 1, timeLeft: 0, phase: "prep", isPaused: false };
+
+// Charger les combos au démarrage
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const res = await fetch('./data/combos.json');
+        listeCombos = await res.json();
+    } catch (e) { console.error("Erreur combos", e); }
+});
+
+// Synthèse Vocale
+function parler(texte) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Coupe l'audio précédent si besoin
+        const msg = new SpeechSynthesisUtterance(texte);
+        msg.lang = 'fr-FR'; 
+        msg.rate = 1.1; // Débit un peu plus rapide pour le sport
+        window.speechSynthesis.speak(msg);
+    }
+}
+
+// Bip sonore simple
+function beep(frequence = 440, duree = 300) {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    osc.frequency.value = frequence;
+    osc.connect(ctx.destination);
+    osc.start(); setTimeout(() => osc.stop(), duree);
+}
+
+// Lancement
+function preparerBoxe() {
+    // Calcul factice pour l'instant (à lier avec Firebase plus tard)
+    document.getElementById("badgeConseilBoxe").innerText = "Conseil : 8 Rounds";
+    showScreen("boxingSetupScreen");
+}
+
+function demarrerBoxe() {
+    boxeState.rounds = parseInt(document.getElementById("selectRoundsBoxe").value);
+    boxeState.currentRound = 1;
+    boxeState.currentInterval = 1;
+    boxeState.isPaused = false;
+    
+    preparerNouveauRound();
+    showScreen("boxingTimerScreen");
+}
+
+function preparerNouveauRound() {
+    boxeState.phase = "prep";
+    boxeState.timeLeft = 10; // 10 secondes avant le 1er coup
+    document.getElementById("boxeRoundInfo").innerText = `Round ${boxeState.currentRound} / ${boxeState.rounds}`;
+    updateBoxeUI();
+    
+    // Tire le premier combo
+    boxeState.nextCombo = listeCombos[Math.floor(Math.random() * listeCombos.length)];
+    document.getElementById("boxeCurrentCombo").innerText = "Dans 10s : " + boxeState.nextCombo;
+    parler("Prépare toi. Prochain enchaînement : " + boxeState.nextCombo);
+    
+    clearInterval(boxeState.timer);
+    boxeState.timer = setInterval(tickBoxe, 1000);
+}
+
+function tickBoxe() {
+    if (boxeState.isPaused) return;
+    boxeState.timeLeft--;
+
+    if (boxeState.timeLeft <= 0) {
+        changerPhaseBoxe();
+    } else if (boxeState.timeLeft <= 3) {
+        beep(800, 200); // 3 petits bips avant le changement
+    }
+    updateBoxeUI();
+}
+
+function changerPhaseBoxe() {
+    if (boxeState.phase === "prep") {
+        // Passe au travail (40s)
+        boxeState.phase = "work";
+        boxeState.timeLeft = 40;
+        beep(1200, 500); // Bip long de départ
+        document.getElementById("boxeCurrentCombo").innerText = boxeState.nextCombo;
+        
+    } else if (boxeState.phase === "work") {
+        boxeState.currentInterval++;
+        if (boxeState.currentInterval > 6) {
+            // Fin du round, passe au repos long (60s)
+            boxeState.phase = "rest";
+            boxeState.timeLeft = 60;
+            beep(600, 800);
+            document.getElementById("boxeCurrentCombo").innerText = "Respire et bois de l'eau !";
+            parler("Fin du round. Repos d'une minute.");
+        } else {
+            // Fin d'un intervalle, micro-pause 10s
+            boxeState.phase = "prep";
+            boxeState.timeLeft = 10;
+            beep(600, 500);
+            boxeState.nextCombo = listeCombos[Math.floor(Math.random() * listeCombos.length)];
+            document.getElementById("boxeCurrentCombo").innerText = "Repos. Ensuite : " + boxeState.nextCombo;
+            parler("Relâche. Prochain : " + boxeState.nextCombo);
+        }
+    } else if (boxeState.phase === "rest") {
+        // Reprise après le repos d'1 minute
+        boxeState.currentRound++;
+        if (boxeState.currentRound > boxeState.rounds) {
+            terminerBoxe();
+        } else {
+            boxeState.currentInterval = 1;
+            preparerNouveauRound();
+        }
+    }
+}
+
+function updateBoxeUI() {
+    const m = String(Math.floor(boxeState.timeLeft / 60)).padStart(2, '0');
+    const s = String(boxeState.timeLeft % 60).padStart(2, '0');
+    document.getElementById("boxeTimerDisplay").innerText = `${m}:${s}`;
+    
+    const badge = document.getElementById("boxePhaseIndicator");
+    if (boxeState.phase === "work") {
+        badge.innerText = "🥊 FRAPPE !";
+        badge.style.background = "var(--danger)";
+    } else if (boxeState.phase === "prep") {
+        badge.innerText = "⏱️ PRÉPARATION (" + boxeState.currentInterval + "/6)";
+        badge.style.background = "var(--accent)";
+    } else {
+        badge.innerText = "💧 REPOS COMPLET";
+        badge.style.background = "var(--success)";
+    }
+}
+
+function togglePauseBoxe() {
+    boxeState.isPaused = !boxeState.isPaused;
+    document.getElementById("btnPauseBoxe").innerText = boxeState.isPaused ? "▶️ Reprendre" : "⏸️ Pause";
+}
+
+function quitterBoxe() {
+    if (confirm("Voulez-vous vraiment arrêter la séance de boxe en cours ?")) {
+        terminerBoxe(false);
+    }
+}
+
+function terminerBoxe(completed = true) {
+    clearInterval(boxeState.timer);
+    window.speechSynthesis.cancel();
+    if (completed) alert("🎉 Séance de boxe terminée ! Bien joué !");
+    // Ici, nous ajouterons plus tard la sauvegarde Firebase de la dépense calorique / rounds effectués
+    showScreen("homeScreen");
+}

@@ -68,6 +68,45 @@
       <button class="primary" onclick="validerFeedback()">Enregistrer & Retour</button>
     </section>
 
+    <!-- ÉCRAN CONFIGURATION BOXE -->
+<section id="boxingSetupScreen" class="hidden">
+  <h2>🥊 Sac de Frappe</h2>
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>Objectif du jour</h3>
+      <span id="badgeConseilBoxe" class="badge" style="background:var(--accent); color:#fff;">Conseil : 8 Rounds</span>
+    </div>
+    <label>Combien de rounds veux-tu faire ?</label>
+    <select id="selectRoundsBoxe">
+      <option value="3">3 Rounds (15 min)</option>
+      <option value="5">5 Rounds (25 min)</option>
+      <option value="8" selected>8 Rounds (40 min)</option>
+      <option value="10">10 Rounds (50 min)</option>
+    </select>
+    <button class="primary" onclick="demarrerBoxe()">Lancer le Timer</button>
+    <button class="ghost" onclick="showScreen('homeScreen')">Retour</button>
+  </div>
+</section>
+
+<!-- ÉCRAN CHRONOMÈTRE BOXE -->
+<section id="boxingTimerScreen" class="hidden">
+  <div style="text-align: center; padding: 20px 0;">
+    <div id="boxeRoundInfo" style="font-weight:bold; color:var(--text-soft); font-size:16px; margin-bottom:8px; text-transform:uppercase;">Round 1 / 8</div>
+    <div id="boxePhaseIndicator" class="badge" style="background:var(--success); color:#fff; font-size:18px; padding:8px 16px;">🥊 ACTION</div>
+    
+    <div id="boxeTimerDisplay" style="font-size: 80px; font-weight: 900; color: var(--primary-strong); margin: 20px 0; font-variant-numeric: tabular-nums;">05:00</div>
+    
+    <div class="card" style="background:rgba(255,87,34,0.1); border-color:var(--primary);">
+      <div style="font-size:14px; color:var(--primary-strong); font-weight:bold;">Enchaînement en cours :</div>
+      <div id="boxeCurrentCombo" style="font-size:24px; font-weight:900; margin-top:8px;">Préparation...</div>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button id="btnPauseBoxe" class="ghost" onclick="togglePauseBoxe()" style="flex:1;">⏸️ Pause</button>
+      <button class="ghost" style="flex:1; color:var(--danger); border-color:var(--danger);" onclick="quitterBoxe()">⏹️ Quitter</button>
+    </div>
+  </div>
+</section>
   </div>
 
   <!-- FIREBASE SDK -->
