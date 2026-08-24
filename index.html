@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Sthénos</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#FF5722">
+</head>
+<body>
+  <div style="max-width: 480px; margin: auto; padding: 16px;">
+    
+    <!-- ÉCRAN DE CHARGEMENT -->
+    <section id="loadingScreen" style="text-align:center; padding-top: 50px;">
+      <h2>Chargement...</h2>
+    </section>
+
+    <!-- ÉCRAN DE CONNEXION -->
+    <section id="loginScreen" class="hidden">
+      <h2>Connexion</h2>
+      <div class="card">
+        <input type="email" id="authEmail" placeholder="Email" style="width: 100%; padding: 12px; margin-bottom: 8px;">
+        <input type="password" id="authPassword" placeholder="Mot de passe" style="width: 100%; padding: 12px; margin-bottom: 8px;">
+        <div style="display: flex; gap: 10px; margin-top: 12px;">
+          <button id="btnLogin" class="primary" style="flex: 1;">Se connecter</button>
+          <button id="btnSignup" class="ghost" style="flex: 1;">Créer un compte</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÉCRAN D'ACCUEIL -->
+    <section id="homeScreen" class="hidden">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>👋 Bonjour !</h2>
+        <button class="ghost" style="width:auto; padding:8px;" onclick="deconnexion()">Déconnexion</button>
+      </div>
+      <div class="card">
+        <h3>Nouvelle Séance</h3>
+        <label>Combien de temps as-tu ?</label>
+        <select id="selectDuree">
+          <option value="20">20 minutes (Circuit Rapide)</option>
+          <option value="35" selected>35 minutes (Standard)</option>
+          <option value="50">50 minutes (Complet)</option>
+        </select>
+        <button class="primary" onclick="demarrerSeance()">Démarrer Callisthénie</button>
+      </div>
+    </section>
+
+    <!-- ÉCRAN DE SÉANCE ACTIVE -->
+    <section id="workoutScreen" class="hidden">
+      <h2 id="workoutTitle">🔥 Séance en cours</h2>
+      <p style="color:var(--text-soft); font-size:14px; margin-bottom: 16px;" id="workoutFormat"></p>
+      
+      <div id="workoutList"></div>
+      
+      <button class="success" style="margin-top:20px;" onclick="terminerSeance()">Terminer la séance</button>
+      <button class="ghost" onclick="showScreen('homeScreen')">Abandonner</button>
+    </section>
+
+    <!-- ÉCRAN D'ÉVALUATION -->
+    <section id="feedbackScreen" class="hidden">
+      <h2>📊 Évaluation</h2>
+      <p style="font-size:14px; color:var(--text-soft); margin-bottom:16px;">
+        Note la difficulté des exercices pour adapter ton programme.
+      </p>
+      <div id="feedbackList"></div>
+      <button class="primary" onclick="validerFeedback()">Enregistrer & Retour</button>
+    </section>
+
+  </div>
+
+  <!-- FIREBASE SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- APP SCRIPTS -->
+  <script src="js/app.js"></script>
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker enregistré !'))
+          .catch(err => console.error('Erreur Service Worker', err));
+      });
+    }
+  </script>
+</body>
+</html>
