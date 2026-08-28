@@ -389,51 +389,63 @@ function beep(frequence = 440, duree = 300) {
     osc.start(); setTimeout(() => osc.stop(), duree);
 }
 
-// Générateur de round (Garantit 300s de travail)
+// Générateur de round dynamique (Garantit 300s de travail avec progression)
 function genererExercicesDuRound() {
-    // Différents découpages de temps pour atteindre 300s (5min)
-    const templatesTemps = [
-        [60, 60, 60, 60, 60],
-        [60, 60, 60, 45, 45, 30],
-        [45, 45, 60, 60, 60, 30],
-        [75, 60, 60, 60, 45],
-        [45, 60, 60, 60, 60, 15]
-    ];
-    let sequenceTemps = templatesTemps[Math.floor(Math.random() * templatesTemps.length)];
-    
-    // Bases de départ cohérentes
-    let bases = [
-        ["J", "C"],
-        ["J", "CA"],
-        ["C", "CA"],
-        ["J", "J", "C"],
-        ["UA", "C"],
-        ["CA", "C"]
-    ];
-    let comboActuel = [...bases[Math.floor(Math.random() * bases.length)]];
-    
+    let tempsRestant = 300; // 5 minutes pile
     let exercices = [];
     
-    for (let i = 0; i < sequenceTemps.length - 1; i++) {
+    // 1. Définir le point de départ du round (le combo de base)
+    const basesPossibles = [
+        ["J"], 
+        ["C"], 
+        ["J", "C"], 
+        ["CA"], 
+        ["UA"]
+    ];
+    let comboEnCours = [...basesPossibles[Math.floor(Math.random() * basesPossibles.length)]];
+    
+    // Le "Burnout" final prendra entre 15s et 30s
+    let tempsBurnout = Math.random() > 0.5 ? 30 : 15;
+    let tempsACombler = tempsRestant - tempsBurnout;
+
+    // 2. Boucle pour combler le temps avec des exercices de 15, 30, 45 ou 60s
+    while (tempsACombler > 0) {
+        // Déterminer la durée de la phase (max 60s, ne doit pas dépasser le temps restant)
+        let dureesPossibles = [15, 30, 45, 60].filter(d => d <= tempsACombler);
+        
+        // On force les phases plus longues (45-60) au début/milieu du round
+        let dureePhase = 60;
+        if (dureesPossibles.length > 0) {
+             dureePhase = dureesPossibles[Math.floor(Math.random() * dureesPossibles.length)];
+             if (tempsACombler > 120 && dureePhase < 45) dureePhase = 60; // Pousser vers 60s au début
+        }
+
+        // Ajouter l'exercice à la liste
         exercices.push({
-            combo: comboActuel.map(m => MOUVEMENTS_BOXE[m]).join(" + "),
-            duree: sequenceTemps[i]
+            combo: comboEnCours.map(m => MOUVEMENTS_BOXE[m]).join(" + "),
+            duree: dureePhase
         });
         
-        // Progression logique : Alternance Bras Avant / Bras Arrière
-        let lastMove = comboActuel[comboActuel.length - 1];
+        tempsACombler -= dureePhase;
+
+        // 3. ÉVOLUTION DU COMBO (Ajouter un coup pour la phase suivante)
+        let lastMove = comboEnCours[comboEnCours.length - 1];
         let isAvant = ["J", "CA", "UA"].includes(lastMove);
-        let nextMove = isAvant 
-            ? ["C", "CR", "UR"][Math.floor(Math.random() * 3)] 
-            : ["J", "CA", "UA"][Math.floor(Math.random() * 3)];
         
-        comboActuel.push(nextMove);
+        // Choisir un coup de l'autre bras pour garder l'équilibre
+        let poolAjout = isAvant ? ["C", "CR", "UR"] : ["J", "CA", "UA"];
+        
+        // On donne plus de chance aux coups basiques (Cross/Jab) qu'aux Uppercuts
+        let coupSuivant = poolAjout[Math.floor(Math.random() * poolAjout.length)];
+        if (Math.random() > 0.6) coupSuivant = isAvant ? "C" : "J"; 
+
+        comboEnCours.push(coupSuivant);
     }
     
-    // Finisher du round
+    // 4. Ajouter le BURNOUT (Finisher) à la fin
     exercices.push({
         combo: BURNOUTS_BOXE[Math.floor(Math.random() * BURNOUTS_BOXE.length)],
-        duree: sequenceTemps[sequenceTemps.length - 1]
+        duree: tempsBurnout
     });
     
     return exercices;
