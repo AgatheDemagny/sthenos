@@ -6,12 +6,12 @@
   <title>Sthénos</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#FF5722">
+  <meta name="theme-color" content="#8A2BE2">
 </head>
 <body>
   <div style="max-width: 480px; margin: auto; padding: 16px;">
     
-    <!-- ÉCRAN DE CHARGEMENT & CONNEXION (Inchangés) -->
+    <!-- ÉCRAN DE CHARGEMENT & CONNEXION -->
     <section id="loadingScreen" style="text-align:center; padding-top: 50px;">
       <h2>Chargement...</h2>
     </section>
@@ -19,11 +19,11 @@
     <section id="loginScreen" class="hidden">
       <h2>Connexion</h2>
       <div class="card">
-        <input type="email" id="authEmail" placeholder="Email" style="width: 100%; padding: 12px; margin-bottom: 8px;">
-        <input type="password" id="authPassword" placeholder="Mot de passe" style="width: 100%; padding: 12px; margin-bottom: 8px;">
+        <input type="email" id="authEmail" placeholder="Email" style="width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 12px; border: 1px solid var(--divider);">
+        <input type="password" id="authPassword" placeholder="Mot de passe" style="width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 12px; border: 1px solid var(--divider);">
         <div style="display: flex; gap: 10px; margin-top: 12px;">
-          <button id="btnLogin" class="primary" style="flex: 1;">Se connecter</button>
-          <button id="btnSignup" class="ghost" style="flex: 1;">Créer un compte</button>
+          <button id="btnLogin" class="primary" style="flex: 1; margin-top: 0;">Se connecter</button>
+          <button id="btnSignup" class="ghost" style="flex: 1; margin-top: 0;">Créer un compte</button>
         </div>
       </div>
     </section>
@@ -32,16 +32,16 @@
     <section id="homeScreen" class="hidden">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
         <h2>Sthénos</h2>
-        <button class="ghost" style="width:auto; padding:6px 12px; font-size:12px;" onclick="deconnexion()">Déconnexion</button>
+        <button class="ghost" style="width:auto; padding:8px 14px; font-size:12px; margin-top: 0;" onclick="deconnexion()">Déconnexion</button>
       </div>
       
       <div style="display:grid; gap:16px;">
-        <div class="card" style="border-color: var(--primary); cursor: pointer;" onclick="showScreen('calisthenicsSetupScreen')">
+        <div class="card" style="border-left: 5px solid var(--primary); cursor: pointer;" onclick="showScreen('calisthenicsSetupScreen')">
           <h3 style="color: var(--primary); font-size: 20px;">🏋️‍♀️ Callisthénie</h3>
           <p style="font-size: 14px; color: var(--text-soft);">Génère une séance au poids du corps adaptée à ton niveau.</p>
         </div>
 
-        <div class="card" style="border-color: var(--danger); cursor: pointer;" onclick="preparerBoxeSetup()">
+        <div class="card" style="border-left: 5px solid var(--danger); cursor: pointer;" onclick="preparerBoxeSetup()">
           <h3 style="color: var(--danger); font-size: 20px;">🥊 Boxe (Sac)</h3>
           <p style="font-size: 14px; color: var(--text-soft);">Chronomètre et coach vocal pour tes enchaînements.</p>
         </div>
@@ -56,7 +56,7 @@
     <section id="calisthenicsSetupScreen" class="hidden">
       <h2>🏋️‍♀️ Configurer la séance</h2>
       <div class="card">
-        <label>Combien de temps as-tu ?</label>
+        <label style="font-weight: 600; color: var(--text-main);">Combien de temps as-tu ?</label>
         <select id="selectDuree">
           <option value="20">20 minutes (Circuit Rapide)</option>
           <option value="35" selected>35 minutes (Standard)</option>
@@ -84,20 +84,20 @@
         <span class="badge" id="caliProgressBadge" style="background:var(--primary); color:white; font-size:14px;">Exo 1 / 8</span>
       </div>
       
-      <div class="card" style="text-align:center; padding:40px 20px; border-color:var(--primary);">
+      <div class="card" style="text-align:center; padding:40px 20px; border: 2px solid var(--primary);">
         <div id="caliExoMuscle" style="font-size:14px; color:var(--text-soft); text-transform:uppercase; font-weight:bold;">Muscle</div>
         <div id="caliExoName" style="font-size:28px; font-weight:900; color:var(--primary-strong); margin:10px 0;">Nom de l'exo</div>
         <div id="caliExoVariant" style="font-size:16px; color:var(--text-main); margin-bottom:20px;">Variante</div>
         <div id="caliExoTarget" style="font-size:32px; font-weight:900; color:var(--accent);">3 x 15 reps</div>
       </div>
 
-      <h4 style="text-align:center; margin-top:20px; color:var(--text-soft);">Valider et passer au suivant :</h4>
+      <h4 style="text-align:center; margin-top:20px; color:var(--text-soft);">Comment était cet exercice ?</h4>
       <div style="display:flex; gap:10px; margin-top:10px;">
         <button class="ghost" style="color:var(--danger); border-color:var(--danger);" onclick="validerExerciceActuel('difficile')">Dur</button>
         <button class="ghost" style="color:var(--text-main); border-color:var(--text-soft);" onclick="validerExerciceActuel('bien')">Bien</button>
         <button class="ghost" style="color:var(--success); border-color:var(--success);" onclick="validerExerciceActuel('facile')">Facile</button>
       </div>
-      <button class="ghost" style="margin-top:20px; border:none;" onclick="quitterEntrainement()">⏹️ Quitter la séance</button>
+      <button class="ghost" style="margin-top:30px; border:none; color: var(--text-soft);" onclick="quitterEntrainement()">⏹️ Quitter la séance</button>
     </section>
 
 
@@ -109,14 +109,14 @@
     <section id="boxingSetupScreen" class="hidden">
       <h2>🥊 Configurer la Boxe</h2>
       <div class="card">
-        <label>Nombre de rounds :</label>
+        <label style="font-weight: 600; color: var(--text-main);">Nombre de rounds :</label>
         <select id="selectRoundsBoxe">
           <option value="3">3 Rounds (15 min)</option>
           <option value="5">5 Rounds (25 min)</option>
           <option value="8" selected>8 Rounds (40 min)</option>
           <option value="10">10 Rounds (50 min)</option>
         </select>
-        <button class="primary" style="background:var(--danger);" onclick="genererApercuBoxe()">Générer les rounds</button>
+        <button class="primary" style="background:linear-gradient(135deg, var(--danger), #ff4757);" onclick="genererApercuBoxe()">Générer les rounds</button>
         <button class="ghost" onclick="showScreen('homeScreen')">Retour</button>
       </div>
     </section>
@@ -125,11 +125,11 @@
     <section id="boxingPreviewScreen" class="hidden">
       <h2>📋 Tes Rounds</h2>
       <div id="boxingPreviewList" style="margin-bottom:20px; max-height:50vh; overflow-y:auto;"></div>
-      <button class="primary" style="background:var(--danger);" onclick="lancerTimerBoxe()">Démarrer le Timer</button>
+      <button class="primary" style="background:linear-gradient(135deg, var(--danger), #ff4757);" onclick="lancerTimerBoxe()">Démarrer le Timer</button>
       <button class="ghost" onclick="showScreen('boxingSetupScreen')">Modifier</button>
     </section>
 
-    <!-- 3. ACTION (Timer inchangé) -->
+    <!-- 3. ACTION -->
     <section id="boxingTimerScreen" class="hidden">
       <div style="text-align: center; padding: 20px 0;">
         <div id="boxeRoundInfo" style="font-weight:bold; color:var(--text-soft); font-size:16px; margin-bottom:8px; text-transform:uppercase;">Round 1 / 8</div>
@@ -137,14 +137,14 @@
         
         <div id="boxeTimerDisplay" style="font-size: 80px; font-weight: 900; color: var(--primary-strong); margin: 20px 0; font-variant-numeric: tabular-nums;">05:00</div>
         
-        <div class="card" style="background:rgba(255,87,34,0.1); border-color:var(--danger);">
+        <div class="card" style="background:rgba(233, 30, 99, 0.05); border-color:var(--danger);">
           <div style="font-size:14px; color:var(--danger); font-weight:bold;">Enchaînement en cours :</div>
           <div id="boxeCurrentCombo" style="font-size:24px; font-weight:900; margin-top:8px; color:var(--text-main);">Préparation...</div>
         </div>
 
         <div style="display:flex; gap:10px; margin-top:20px;">
           <button id="btnPauseBoxe" class="ghost" onclick="togglePauseBoxe()" style="flex:1;">⏸️ Pause</button>
-          <button class="ghost" style="flex:1; color:var(--danger); border-color:var(--danger);" onclick="quitterEntrainement()">⏹️ Quitter</button>
+          <button class="ghost" style="flex:1; color:var(--danger); border-color:var(--danger);" onclick="quitterBoxe()">⏹️ Quitter</button>
         </div>
       </div>
     </section>
@@ -152,9 +152,9 @@
   </div>
 
   <!-- FIREBASE SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="[https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js](https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js](https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js](https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js)"></script>
 
   <!-- APP SCRIPTS -->
   <script src="js/app.js"></script>
