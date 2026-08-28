@@ -38,12 +38,10 @@
       <div style="display:grid; gap:16px;">
         <div class="card" style="border-left: 5px solid var(--primary); cursor: pointer;" onclick="showScreen('calisthenicsSetupScreen')">
           <h3 style="color: var(--primary); font-size: 20px;">🏋️‍♀️ Callisthénie</h3>
-          <p style="font-size: 14px; color: var(--text-soft);">Génère une séance au poids du corps adaptée à ton niveau.</p>
         </div>
 
         <div class="card" style="border-left: 5px solid var(--danger); cursor: pointer;" onclick="preparerBoxeSetup()">
-          <h3 style="color: var(--danger); font-size: 20px;">🥊 Boxe (Sac)</h3>
-          <p style="font-size: 14px; color: var(--text-soft);">Chronomètre et coach vocal pour tes enchaînements.</p>
+          <h3 style="color: var(--danger); font-size: 20px;">🥊 Sac de frappe</h3>
         </div>
       </div>
     </section>
@@ -53,29 +51,29 @@
     <!-- ========================================= -->
     <!-- 1. SETUP -->
     <section id="calisthenicsSetupScreen" class="hidden">
-      <h2>🏋️‍♀️ Configurer la séance</h2>
+      <h2>🏋️‍♀️ Séance Callisthénie</h2>
       <div class="card">
         <label style="font-weight: 600; color: var(--text-main);">
-          Temps disponible : <span id="lblDuree" style="color:var(--primary); font-size:20px;">30</span> min
+          Temps : <span id="lblDuree" style="color:var(--primary); font-size:20px;">30</span> minutes
         </label>
-        <input type="range" id="selectDuree" min="15" max="90" step="5" value="30" 
+        <input type="range" id="selectDuree" min="15" max="60" step="5" value="30" 
                oninput="document.getElementById('lblDuree').innerText = this.value" 
                style="width:100%; margin: 20px 0; accent-color: var(--primary);">
         
-        <button class="primary" onclick="genererApercuCallisthenie()">Générer le programme</button>
+        <button class="primary" onclick="genererApercuCallisthenie()">Programme de la séance</button>
         <button class="ghost" onclick="showScreen('homeScreen')">Retour</button>
       </div>
     </section>
 
     <!-- 2. PREVIEW -->
     <section id="calisthenicsPreviewScreen" class="hidden">
-      <h2>📋 Ton Programme</h2>
+      <h2>📋 Programme</h2>
       <p id="workoutFormat" style="font-size:14px; color:var(--text-main); margin-bottom:16px;"></p>
       
       <div id="workoutListPreview" style="margin-bottom:20px;"></div>
       
-      <button class="primary" onclick="lancerSeanceCallisthenie()">Démarrer l'entraînement</button>
-      <button class="ghost" onclick="showScreen('calisthenicsSetupScreen')">Modifier la durée</button>
+      <button class="primary" onclick="lancerSeanceCallisthenie()">Démarrer</button>
+      <button class="ghost" onclick="showScreen('calisthenicsSetupScreen')">Modifier la séance</button>
     </section>
 
     <!-- 3. ACTION (Timers & Séries) -->
@@ -89,7 +87,7 @@
         <!-- Infos de l'exercice -->
         <div id="caliMainInfo">
           <div id="caliExoMuscle" style="font-size:14px; color:var(--text-soft); text-transform:uppercase; font-weight:bold;">Muscle</div>
-          <div id="caliExoName" style="font-size:28px; font-weight:900; color:var(--primary-strong); margin:10px 0;">Nom de l'exo</div>
+          <div id="caliExoName" style="font-size:28px; font-weight:900; color:var(--primary-strong); margin:10px 0;">Exercice</div>
           <div id="caliExoVariant" style="font-size:16px; color:var(--text-main); margin-bottom:20px;">Variante</div>
           <div id="caliExoTarget" style="font-size:32px; font-weight:900; color:var(--accent);">15 reps</div>
         </div>
@@ -114,25 +112,25 @@
 
     <!-- 1. SETUP -->
     <section id="boxingSetupScreen" class="hidden">
-      <h2>🥊 Configurer la Boxe</h2>
+      <h2>🥊 Séance Boxe</h2>
       <div class="card">
         <label style="font-weight: 600; color: var(--text-main);">Nombre de rounds :</label>
         <select id="selectRoundsBoxe">
-          <option value="3">3 Rounds (15 min)</option>
-          <option value="5">5 Rounds (25 min)</option>
-          <option value="8" selected>8 Rounds (40 min)</option>
-          <option value="10">10 Rounds (50 min)</option>
+          <option value="3">3 Rounds</option>
+          <option value="5">5 Rounds</option>
+          <option value="8" selected>8 Rounds</option>
+          <option value="10">10 Rounds</option>
         </select>
-        <button class="primary" style="background:linear-gradient(135deg, var(--danger), #ff4757);" onclick="genererApercuBoxe()">Générer les rounds</button>
+        <button class="primary" style="background:linear-gradient(135deg, var(--danger), #ff4757);" onclick="genererApercuBoxe()">Programme de la séance</button>
         <button class="ghost" onclick="showScreen('homeScreen')">Retour</button>
       </div>
     </section>
 
     <!-- 2. PREVIEW -->
     <section id="boxingPreviewScreen" class="hidden">
-      <h2>📋 Tes Rounds</h2>
+      <h2>📋 Rounds</h2>
       <div id="boxingPreviewList" style="margin-bottom:20px; max-height:50vh; overflow-y:auto;"></div>
-      <button class="primary" style="background:linear-gradient(135deg, var(--danger), #ff4757);" onclick="lancerTimerBoxe()">Démarrer le Timer</button>
+      <button class="primary" style="background:linear-gradient(135deg, var(--danger), #ff4757);" onclick="lancerTimerBoxe()">Démarrer</button>
       <button class="ghost" onclick="showScreen('boxingSetupScreen')">Modifier</button>
     </section>
 

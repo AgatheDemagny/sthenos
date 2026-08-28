@@ -1,4 +1,4 @@
-const CACHE_VERSION = "V1.13";
+const CACHE_VERSION = "V1.14";
 const CACHE_NAME = `sthenos-${CACHE_VERSION}`;
 const FILES_TO_CACHE = [
   "./",
