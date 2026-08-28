@@ -21,7 +21,7 @@
   /* Arrondis plus généreux typiques des apps premium */
   --r-1: 20px; 
 }
-
+.hidden { display: none !important; }
 .card {
   background: var(--card-bg); 
   border: 1px solid var(--card-border);
