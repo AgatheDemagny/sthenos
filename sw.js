@@ -6,7 +6,6 @@ const FILES_TO_CACHE = [
   "./css/style.css",
   "./js/app.js",
   "./data/exercices.json",
-  "./data/combos.json", 
   "./manifest.json"
 ];
 
