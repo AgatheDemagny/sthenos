@@ -1,27 +1,31 @@
 :root {
-  /* Fonds plus clairs pour un aspect "clean" */
+  /* Fonds plus clairs pour un aspect "clean" et Premium */
   --bg-main: #fcfcfd; 
   --card-bg: #ffffff;
   --card-border: rgba(0, 0, 0, 0.04); 
   
-  /* Tes nouvelles couleurs de marque */
-  --primary: #8A2BE2; /* Violet pétant (BlueViolet) */
-  --primary-strong: #6A1B9A; /* Violet profond pour les titres */
-  --accent: #E91E63; /* Framboise */
+  /* Couleurs de marque : Violet pétant et Framboise */
+  --primary: #8A2BE2; 
+  --primary-strong: #6A1B9A; 
+  --accent: #E91E63; 
   
   /* Typographie adoucie */
   --text-main: #2d3436; 
   --text-soft: #636e72;
   --divider: #f1f2f6;
   
-  /* Sémantique */
-  --danger: var(--accent); /* On utilise le framboise pour la boxe et l'intensité */
+  /* Sémantique (framboise pour le danger/action) */
+  --danger: var(--accent); 
   --success: #00b894;
   
   /* Arrondis plus généreux typiques des apps premium */
   --r-1: 20px; 
 }
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+body { background: var(--bg-main); color: var(--text-main); }
 .hidden { display: none !important; }
+
 .card {
   background: var(--card-bg); 
   border: 1px solid var(--card-border);
@@ -33,7 +37,6 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Effet interactif subtil */
 .card:active {
   transform: translateY(2px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.02);
@@ -52,7 +55,6 @@ button {
 }
 
 button.primary { 
-  /* Un beau dégradé Violet -> Framboise pour le bouton principal */
   background: linear-gradient(135deg, var(--primary), var(--accent)); 
   color: white; 
   box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
@@ -61,3 +63,10 @@ button.primary {
 button.primary:active {
   transform: scale(0.98);
 }
+
+button.ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+button.success { background: var(--success); color: white; }
+
+select { width: 100%; padding: 16px; margin-top: 8px; border-radius: 14px; border: 1px solid var(--divider); background: var(--bg-main); font-size: 16px; }
+h2, h3 { margin-bottom: 12px; color: var(--primary-strong); }
+.badge { background: var(--divider); padding: 6px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
