@@ -11,12 +11,11 @@
 <body>
   <div style="max-width: 480px; margin: auto; padding: 16px;">
     
-    <!-- ÉCRAN DE CHARGEMENT -->
+    <!-- ÉCRAN DE CHARGEMENT & CONNEXION (Inchangés) -->
     <section id="loadingScreen" style="text-align:center; padding-top: 50px;">
       <h2>Chargement...</h2>
     </section>
 
-    <!-- ÉCRAN DE CONNEXION -->
     <section id="loginScreen" class="hidden">
       <h2>Connexion</h2>
       <div class="card">
@@ -29,89 +28,127 @@
       </div>
     </section>
 
-    <!-- ÉCRAN D'ACCUEIL -->
+    <!-- ÉCRAN D'ACCUEIL : TABLEAU DE BORD -->
     <section id="homeScreen" class="hidden">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>👋 Bonjour !</h2>
-        <button class="ghost" style="width:auto; padding:8px;" onclick="deconnexion()">Déconnexion</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h2>Sthénos</h2>
+        <button class="ghost" style="width:auto; padding:6px 12px; font-size:12px;" onclick="deconnexion()">Déconnexion</button>
       </div>
+      
+      <div style="display:grid; gap:16px;">
+        <div class="card" style="border-color: var(--primary); cursor: pointer;" onclick="showScreen('calisthenicsSetupScreen')">
+          <h3 style="color: var(--primary); font-size: 20px;">🏋️‍♀️ Callisthénie</h3>
+          <p style="font-size: 14px; color: var(--text-soft);">Génère une séance au poids du corps adaptée à ton niveau.</p>
+        </div>
+
+        <div class="card" style="border-color: var(--danger); cursor: pointer;" onclick="preparerBoxeSetup()">
+          <h3 style="color: var(--danger); font-size: 20px;">🥊 Boxe (Sac)</h3>
+          <p style="font-size: 14px; color: var(--text-soft);">Chronomètre et coach vocal pour tes enchaînements.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- MODULE CALLISTHÉNIE                       -->
+    <!-- ========================================= -->
+
+    <!-- 1. SETUP -->
+    <section id="calisthenicsSetupScreen" class="hidden">
+      <h2>🏋️‍♀️ Configurer la séance</h2>
       <div class="card">
-        <h3>Nouvelle Séance</h3>
         <label>Combien de temps as-tu ?</label>
         <select id="selectDuree">
           <option value="20">20 minutes (Circuit Rapide)</option>
           <option value="35" selected>35 minutes (Standard)</option>
           <option value="50">50 minutes (Complet)</option>
         </select>
-        <button class="primary" onclick="demarrerSeance()">Démarrer Callisthénie</button>
-      </div>
-      <div class="card" style="border-color: var(--danger);">
-        <h3 style="color: var(--danger);">🥊 Boxe (Sac de Frappe)</h3>
-        <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 8px; border:none;">Chronomètre avec coach vocal.</p>
-        <button class="primary" style="background: var(--danger);" onclick="preparerBoxe()">Démarrer la Boxe</button>
+        <button class="primary" onclick="genererApercuCallisthenie()">Générer le programme</button>
+        <button class="ghost" onclick="showScreen('homeScreen')">Retour</button>
       </div>
     </section>
 
-    <!-- ÉCRAN DE SÉANCE ACTIVE -->
-    <section id="workoutScreen" class="hidden">
-      <h2 id="workoutTitle">🔥 Séance en cours</h2>
-      <p style="color:var(--text-soft); font-size:14px; margin-bottom: 16px;" id="workoutFormat"></p>
+    <!-- 2. PREVIEW -->
+    <section id="calisthenicsPreviewScreen" class="hidden">
+      <h2>📋 Ton Programme</h2>
+      <p id="workoutFormat" style="font-size:14px; color:var(--text-main); margin-bottom:16px;"></p>
       
-      <div id="workoutList"></div>
+      <div id="workoutListPreview" style="margin-bottom:20px;"></div>
       
-      <button class="success" style="margin-top:20px;" onclick="terminerSeance()">Terminer la séance</button>
-      <button class="ghost" onclick="showScreen('homeScreen')">Abandonner</button>
+      <button class="primary" onclick="lancerSeanceCallisthenie()">Démarrer l'entraînement</button>
+      <button class="ghost" onclick="showScreen('calisthenicsSetupScreen')">Modifier la durée</button>
     </section>
 
-    <!-- ÉCRAN D'ÉVALUATION -->
-    <section id="feedbackScreen" class="hidden">
-      <h2>📊 Évaluation</h2>
-      <p style="font-size:14px; color:var(--text-soft); margin-bottom:16px;">
-        Note la difficulté des exercices pour adapter ton programme.
-      </p>
-      <div id="feedbackList"></div>
-      <button class="primary" onclick="validerFeedback()">Enregistrer & Retour</button>
+    <!-- 3. ACTION (1 Exo à la fois) -->
+    <section id="calisthenicsActiveScreen" class="hidden">
+      <div style="text-align:center; margin-bottom:20px;">
+        <span class="badge" id="caliProgressBadge" style="background:var(--primary); color:white; font-size:14px;">Exo 1 / 8</span>
+      </div>
+      
+      <div class="card" style="text-align:center; padding:40px 20px; border-color:var(--primary);">
+        <div id="caliExoMuscle" style="font-size:14px; color:var(--text-soft); text-transform:uppercase; font-weight:bold;">Muscle</div>
+        <div id="caliExoName" style="font-size:28px; font-weight:900; color:var(--primary-strong); margin:10px 0;">Nom de l'exo</div>
+        <div id="caliExoVariant" style="font-size:16px; color:var(--text-main); margin-bottom:20px;">Variante</div>
+        <div id="caliExoTarget" style="font-size:32px; font-weight:900; color:var(--accent);">3 x 15 reps</div>
+      </div>
+
+      <h4 style="text-align:center; margin-top:20px; color:var(--text-soft);">Valider et passer au suivant :</h4>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="ghost" style="color:var(--danger); border-color:var(--danger);" onclick="validerExerciceActuel('difficile')">Dur</button>
+        <button class="ghost" style="color:var(--text-main); border-color:var(--text-soft);" onclick="validerExerciceActuel('bien')">Bien</button>
+        <button class="ghost" style="color:var(--success); border-color:var(--success);" onclick="validerExerciceActuel('facile')">Facile</button>
+      </div>
+      <button class="ghost" style="margin-top:20px; border:none;" onclick="quitterEntrainement()">⏹️ Quitter la séance</button>
     </section>
 
-    <!-- ÉCRAN CONFIGURATION BOXE -->
-<section id="boxingSetupScreen" class="hidden">
-  <h2>🥊 Sac de Frappe</h2>
-  <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3>Objectif du jour</h3>
-      <span id="badgeConseilBoxe" class="badge" style="background:var(--accent); color:#fff;">Conseil : 8 Rounds</span>
-    </div>
-    <label>Combien de rounds veux-tu faire ?</label>
-    <select id="selectRoundsBoxe">
-      <option value="3">3 Rounds (15 min)</option>
-      <option value="5">5 Rounds (25 min)</option>
-      <option value="8" selected>8 Rounds (40 min)</option>
-      <option value="10">10 Rounds (50 min)</option>
-    </select>
-    <button class="primary" onclick="demarrerBoxe()">Lancer le Timer</button>
-    <button class="ghost" onclick="showScreen('homeScreen')">Retour</button>
-  </div>
-</section>
 
-<!-- ÉCRAN CHRONOMÈTRE BOXE -->
-<section id="boxingTimerScreen" class="hidden">
-  <div style="text-align: center; padding: 20px 0;">
-    <div id="boxeRoundInfo" style="font-weight:bold; color:var(--text-soft); font-size:16px; margin-bottom:8px; text-transform:uppercase;">Round 1 / 8</div>
-    <div id="boxePhaseIndicator" class="badge" style="background:var(--success); color:#fff; font-size:18px; padding:8px 16px;">🥊 ACTION</div>
-    
-    <div id="boxeTimerDisplay" style="font-size: 80px; font-weight: 900; color: var(--primary-strong); margin: 20px 0; font-variant-numeric: tabular-nums;">05:00</div>
-    
-    <div class="card" style="background:rgba(255,87,34,0.1); border-color:var(--primary);">
-      <div style="font-size:14px; color:var(--primary-strong); font-weight:bold;">Enchaînement en cours :</div>
-      <div id="boxeCurrentCombo" style="font-size:24px; font-weight:900; margin-top:8px;">Préparation...</div>
-    </div>
+    <!-- ========================================= -->
+    <!-- MODULE BOXE                               -->
+    <!-- ========================================= -->
 
-    <div style="display:flex; gap:10px; margin-top:20px;">
-      <button id="btnPauseBoxe" class="ghost" onclick="togglePauseBoxe()" style="flex:1;">⏸️ Pause</button>
-      <button class="ghost" style="flex:1; color:var(--danger); border-color:var(--danger);" onclick="quitterBoxe()">⏹️ Quitter</button>
-    </div>
-  </div>
-</section>
+    <!-- 1. SETUP -->
+    <section id="boxingSetupScreen" class="hidden">
+      <h2>🥊 Configurer la Boxe</h2>
+      <div class="card">
+        <label>Nombre de rounds :</label>
+        <select id="selectRoundsBoxe">
+          <option value="3">3 Rounds (15 min)</option>
+          <option value="5">5 Rounds (25 min)</option>
+          <option value="8" selected>8 Rounds (40 min)</option>
+          <option value="10">10 Rounds (50 min)</option>
+        </select>
+        <button class="primary" style="background:var(--danger);" onclick="genererApercuBoxe()">Générer les rounds</button>
+        <button class="ghost" onclick="showScreen('homeScreen')">Retour</button>
+      </div>
+    </section>
+
+    <!-- 2. PREVIEW -->
+    <section id="boxingPreviewScreen" class="hidden">
+      <h2>📋 Tes Rounds</h2>
+      <div id="boxingPreviewList" style="margin-bottom:20px; max-height:50vh; overflow-y:auto;"></div>
+      <button class="primary" style="background:var(--danger);" onclick="lancerTimerBoxe()">Démarrer le Timer</button>
+      <button class="ghost" onclick="showScreen('boxingSetupScreen')">Modifier</button>
+    </section>
+
+    <!-- 3. ACTION (Timer inchangé) -->
+    <section id="boxingTimerScreen" class="hidden">
+      <div style="text-align: center; padding: 20px 0;">
+        <div id="boxeRoundInfo" style="font-weight:bold; color:var(--text-soft); font-size:16px; margin-bottom:8px; text-transform:uppercase;">Round 1 / 8</div>
+        <div id="boxePhaseIndicator" class="badge" style="background:var(--success); color:#fff; font-size:18px; padding:8px 16px;">🥊 ACTION</div>
+        
+        <div id="boxeTimerDisplay" style="font-size: 80px; font-weight: 900; color: var(--primary-strong); margin: 20px 0; font-variant-numeric: tabular-nums;">05:00</div>
+        
+        <div class="card" style="background:rgba(255,87,34,0.1); border-color:var(--danger);">
+          <div style="font-size:14px; color:var(--danger); font-weight:bold;">Enchaînement en cours :</div>
+          <div id="boxeCurrentCombo" style="font-size:24px; font-weight:900; margin-top:8px; color:var(--text-main);">Préparation...</div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button id="btnPauseBoxe" class="ghost" onclick="togglePauseBoxe()" style="flex:1;">⏸️ Pause</button>
+          <button class="ghost" style="flex:1; color:var(--danger); border-color:var(--danger);" onclick="quitterEntrainement()">⏹️ Quitter</button>
+        </div>
+      </div>
+    </section>
+
   </div>
 
   <!-- FIREBASE SDK -->
@@ -121,15 +158,5 @@
 
   <!-- APP SCRIPTS -->
   <script src="js/app.js"></script>
-  
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker enregistré !'))
-          .catch(err => console.error('Erreur Service Worker', err));
-      });
-    }
-  </script>
 </body>
 </html>

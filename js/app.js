@@ -351,7 +351,6 @@ const BURNOUTS_BOXE = [
     "1-2 Non-stop 🔥",
     "Uppercuts continus 🔥",
     "Crochets continus 🔥",
-    "Jab + Crochet arrière non-stop 🔥"
 ];
 
 let boxeState = { 
