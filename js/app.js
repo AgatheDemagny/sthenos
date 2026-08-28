@@ -79,189 +79,206 @@ const firebaseConfig = {
   window.deconnexion = () => { auth.signOut(); };
   
   // =========================================
-  // --- MODULE CALLISTHÉNIE ---
-  // =========================================
-  const GROUPES_MAJEURS = ["quadriceps", "fessiers", "grand dorsal", "pectoraux", "deltoïdes", "abdominaux", "triceps", "biceps"];
-  const ORDRE_FOCUS = ["fessiers", "grand dorsal", "quadriceps", "pectoraux", "abdominaux", "deltoïdes"];
-  let currentExoIndex = 0;
-  
-  window.genererApercuCallisthenie = function() {
-      const dureeObjectif = parseInt(document.getElementById("selectDuree").value);
-      modeCircuit = dureeObjectif <= 25;
-      
-      const tempsBaseBilateral = modeCircuit ? 2.5 : 3.5;
-      const tempsBaseUnilateral = modeCircuit ? 4.5 : 6.0;
-  
-      // Filtrer les exos dispo
-      const exosDispos = catalogueExercices.filter(exo => {
-          const profilFamille = userProgress[exo.famille] || { id_actuel: exo.famille + "_1" };
-          return exo.id === profilFamille.id_actuel;
-      });
-  
-      const dernierFocus = userProgress._lastFocus || "deltoïdes"; 
-      let indexDernier = ORDRE_FOCUS.indexOf(dernierFocus);
-      if (indexDernier === -1) indexDernier = 0;
-      const focusDuJour = ORDRE_FOCUS[(indexDernier + 1) % ORDRE_FOCUS.length];
-  
-      seanceEnCours = [];
-      let tempsCumule = 0;
-      let musclesTravailles = new Set();
-  
-      // Ajout exo focus
-      let exosFocus = exosDispos.filter(e => e.muscles_principaux.includes(focusDuJour));
-      if (exosFocus.length > 0) {
-          let exoChoisi = exosFocus[Math.floor(Math.random() * exosFocus.length)];
-          seanceEnCours.push(exoChoisi);
-          exoChoisi.muscles_principaux.forEach(m => musclesTravailles.add(m));
-          tempsCumule += exoChoisi.unilateral ? tempsBaseUnilateral : tempsBaseBilateral;
-      }
-  
-      // Full body loop
-      for (let muscle of GROUPES_MAJEURS) {
-          if (tempsCumule >= dureeObjectif - 3) break;
-          if (musclesTravailles.has(muscle)) continue;
-          let exosPourMuscle = exosDispos.filter(e => e.muscles_principaux.includes(muscle) && !seanceEnCours.includes(e));
-          if (exosPourMuscle.length > 0) {
-              let exoChoisi = exosPourMuscle[Math.floor(Math.random() * exosPourMuscle.length)];
-              seanceEnCours.push(exoChoisi);
-              exoChoisi.muscles_principaux.forEach(m => musclesTravailles.add(m));
-              tempsCumule += exoChoisi.unilateral ? tempsBaseUnilateral : tempsBaseBilateral;
-          }
-      }
-  
-      userProgress._lastFocus = focusDuJour;
-      notesSeance = {};
-  
-      // Affichage de l'aperçu
-      const focusAffiche = focusDuJour.charAt(0).toUpperCase() + focusDuJour.slice(1);
-      document.getElementById("workoutFormat").innerHTML = `
-          <span class="badge" style="background:var(--primary); color:white; font-size:14px; margin-bottom:8px; display:inline-block;">
-              🎯 Focus : ${focusAffiche}
-          </span><br>
-          <span style="font-weight:600; color:var(--text-main);">Durée estimée : ~${Math.round(tempsCumule)} min</span><br><br>
-          ${modeCircuit 
-              ? "⚡ Circuit : Enchaîne 1 série de chaque sans pause. Fais 4 tours !" 
-              : "💪 Standard : Finis toutes les séries de l'exercice avant de passer au suivant."}
-      `;
-      
-      const listPreview = document.getElementById("workoutListPreview");
-      listPreview.innerHTML = "";
-      
-      seanceEnCours.forEach((exo, index) => {
-          const profil = userProgress[exo.famille] || { current_val: exo.base_min };
-          const volumeTxt = exo.type_effort === "temps" ? `${profil.current_val}s` : `${profil.current_val} reps`;
-          const isFocus = exo.muscles_principaux.includes(focusDuJour);
-          const borderColor = isFocus ? "var(--danger)" : "var(--primary)";
-  
-          listPreview.innerHTML += `
-              <div class="card" style="border-left: 4px solid ${borderColor}; padding: 16px; margin-bottom: 8px;">
-                  <div style="font-weight: bold; color: var(--text-main);">${index + 1}. ${exo.nom}</div>
-                  <div style="font-size: 13px; color: var(--text-soft);">${exo.variante} • ${volumeTxt}</div>
-              </div>
-          `;
-      });
-  
-      showScreen("calisthenicsPreviewScreen");
-  };
-  
-  window.lancerSeanceCallisthenie = function() {
-      currentExoIndex = 0;
-      afficherExerciceActuel();
-      showScreen("calisthenicsActiveScreen");
-  };
-  
-  function afficherExerciceActuel() {
-      const exo = seanceEnCours[currentExoIndex];
-      const total = seanceEnCours.length;
-      
-      document.getElementById("caliProgressBadge").innerText = `Exo ${currentExoIndex + 1} / ${total}`;
-      document.getElementById("caliExoMuscle").innerText = exo.muscles_principaux.join(" & ");
-      document.getElementById("caliExoName").innerText = exo.nom;
-      document.getElementById("caliExoVariant").innerText = exo.variante;
-      
-      const profil = userProgress[exo.famille] || { current_val: exo.base_min };
-      const volumeTxt = exo.type_effort === "temps" ? `${profil.current_val} sec` : `${profil.current_val} reps`;
-      const seriesTxt = modeCircuit ? "1 série (Circuit)" : "3 séries";
-      const unilateralTxt = exo.unilateral ? " / côté" : "";
-  
-      document.getElementById("caliExoTarget").innerText = `${seriesTxt} x ${volumeTxt}${unilateralTxt}`;
-  }
-  
-  window.validerExerciceActuel = function(difficulte) {
-      const exo = seanceEnCours[currentExoIndex];
-      notesSeance[exo.nom] = difficulte;
-  
-      currentExoIndex++;
-  
-      if (currentExoIndex < seanceEnCours.length) {
-          afficherExerciceActuel();
-      } else {
-          alert("🎉 Bravo, séance terminée ! Tes résultats sont enregistrés.");
-          calculerProgressionFirebase();
-      }
-  };
-  
-  window.quitterEntrainement = function() {
-      if(confirm("Veux-tu vraiment abandonner la séance en cours ?")) {
-          showScreen("homeScreen");
-      }
-  };
-  
-  async function calculerProgressionFirebase() {
-      let messageLevelUp = "";
-  
-      seanceEnCours.forEach(exo => {
-          let note = notesSeance[exo.nom] || "bien";
-          let state = userProgress[exo.famille] || { 
-              id_actuel: exo.id, 
-              current_val: exo.base_min, 
-              streak: 0 
-          };
-          
-          if (note === "facile") {
-              state.streak += 1;
-              state.current_val += (exo.type_effort === "temps" ? 5 : 2);
-              
-              // LEVEL UP: S'il a atteint le volume max ET validé 5 séances d'affilée en "facile"
-              if (state.current_val >= exo.base_max && state.streak >= 5) {
-                  const exoSup = catalogueExercices.find(e => e.prerequis.includes(exo.id));
-                  if (exoSup) {
-                      state.id_actuel = exoSup.id;
-                      state.current_val = exoSup.base_min;
-                      state.streak = 0;
-                      messageLevelUp += `\n- ${exoSup.nom} (${exoSup.variante})`;
-                  } else {
-                      state.current_val = exo.base_max; 
-                  }
-              }
-          } else if (note === "difficile") {
-              state.streak = 0;
-              state.current_val = Math.max(exo.base_min, state.current_val - (exo.type_effort === "temps" ? 5 : 2));
-          } else {
-              state.streak = 0; // "bien" remet le streak de facilité à 0, maintient le volume
-          }
-          
-          userProgress[exo.famille] = state;
-      });
-  
-      if (messageLevelUp !== "") {
-          alert("🚀 LEVEL UP ! Pour la prochaine séance, tu as débloqué :" + messageLevelUp);
-      }
-  
-      // SAUVEGARDE FIREBASE
-      if (currentUser) {
-          try {
-              await db.collection("sthenos_users").doc(currentUser.uid).set({
-                  progress: userProgress,
-                  lastWorkout: Date.now()
-              }, { merge: true });
-          } catch(e) {
-              console.error("Erreur sauvegarde cloud", e);
-          }
-      }
-      
-      showScreen("homeScreen");
-  }
+// --- MODULE CALLISTHÉNIE ---
+// =========================================
+const GROUPES_MAJEURS = ["quadriceps", "fessiers", "grand dorsal", "pectoraux", "deltoïdes", "abdominaux", "triceps", "biceps"];
+const ORDRE_FOCUS = ["fessiers", "grand dorsal", "quadriceps", "pectoraux", "abdominaux", "deltoïdes"];
+
+let caliState = { currentExoIndex: 0, currentSet: 1, timer: null };
+
+window.genererApercuCallisthenie = function() {
+    const dureeObjectif = parseInt(document.getElementById("selectDuree").value);
+    const nombreExosObjectif = Math.floor(dureeObjectif / 3); // 1 exo = 3 min
+
+    // Filtrer les exos débloqués
+    const exosDispos = catalogueExercices.filter(exo => {
+        const profilFamille = userProgress[exo.famille] || { id_actuel: exo.famille + "_1" };
+        return exo.id === profilFamille.id_actuel;
+    });
+
+    const dernierFocus = userProgress._lastFocus || "deltoïdes"; 
+    let indexDernier = ORDRE_FOCUS.indexOf(dernierFocus);
+    if (indexDernier === -1) indexDernier = 0;
+    const focusDuJour = ORDRE_FOCUS[(indexDernier + 1) % ORDRE_FOCUS.length];
+
+    seanceEnCours = [];
+    let musclesTravailles = new Set();
+    let exosRestants = [...exosDispos];
+
+    // 1. Équilibrer au maximum (1 exo par grand muscle)
+    let groupesMelanges = [...GROUPES_MAJEURS].sort(() => Math.random() - 0.5);
+    for (let muscle of groupesMelanges) {
+        if (seanceEnCours.length >= nombreExosObjectif) break;
+        let exosPourMuscle = exosRestants.filter(e => e.muscles_principaux.includes(muscle) && !seanceEnCours.includes(e));
+        if (exosPourMuscle.length > 0) {
+            let choisi = exosPourMuscle[Math.floor(Math.random() * exosPourMuscle.length)];
+            seanceEnCours.push(choisi);
+            choisi.muscles_principaux.forEach(m => musclesTravailles.add(m));
+        }
+    }
+
+    // 2. Combler avec le Focus du jour si on n'a pas atteint le nombre
+    let securite = 0;
+    while (seanceEnCours.length < nombreExosObjectif && securite < 20) {
+        securite++;
+        let exosFocus = exosRestants.filter(e => e.muscles_principaux.includes(focusDuJour) && !seanceEnCours.includes(e));
+        if (exosFocus.length > 0) {
+            seanceEnCours.push(exosFocus[Math.floor(Math.random() * exosFocus.length)]);
+        } else {
+            // S'il n'y a plus de focus, on prend au hasard
+            let autres = exosRestants.filter(e => !seanceEnCours.includes(e));
+            if (autres.length > 0) seanceEnCours.push(autres[Math.floor(Math.random() * autres.length)]);
+            else break;
+        }
+    }
+
+    userProgress._lastFocus = focusDuJour;
+    notesSeance = {};
+
+    // Affichage
+    const focusAffiche = focusDuJour.charAt(0).toUpperCase() + focusDuJour.slice(1);
+    document.getElementById("workoutFormat").innerHTML = `
+        <span class="badge" style="background:var(--primary); color:white; font-size:14px; margin-bottom:8px; display:inline-block;">🎯 Focus : ${focusAffiche}</span><br>
+        <span style="font-weight:600; color:var(--text-main);">Volume : ${seanceEnCours.length} exercices (3 séries chacun)</span>
+    `;
+    
+    const listPreview = document.getElementById("workoutListPreview");
+    listPreview.innerHTML = "";
+    
+    seanceEnCours.forEach((exo, index) => {
+        const profil = userProgress[exo.famille] || { current_val: exo.base_min };
+        const volumeTxt = exo.type_effort === "temps" ? `${profil.current_val}s` : `${profil.current_val} reps`;
+        const isFocus = exo.muscles_principaux.includes(focusDuJour);
+        const borderColor = isFocus ? "var(--danger)" : "var(--primary)";
+
+        listPreview.innerHTML += `
+            <div class="card" style="border-left: 4px solid ${borderColor}; padding: 16px; margin-bottom: 8px;">
+                <div style="font-weight: bold; color: var(--text-main);">${index + 1}. ${exo.nom}</div>
+                <div style="font-size: 13px; color: var(--text-soft);">${exo.variante} • 3 x ${volumeTxt}</div>
+            </div>
+        `;
+    });
+
+    showScreen("calisthenicsPreviewScreen");
+};
+
+window.lancerSeanceCallisthenie = function() {
+    caliState.currentExoIndex = 0;
+    caliState.currentSet = 1;
+    afficherExerciceActuel();
+    showScreen("calisthenicsActiveScreen");
+};
+
+function afficherExerciceActuel() {
+    clearInterval(caliState.timer);
+    document.getElementById("caliTimerDisplay").classList.add("hidden");
+    document.getElementById("caliMainInfo").classList.remove("hidden");
+    document.getElementById("caliActionButtons").classList.remove("hidden");
+
+    const exo = seanceEnCours[caliState.currentExoIndex];
+    
+    document.getElementById("caliProgressBadge").innerText = `Exo ${caliState.currentExoIndex + 1} / ${seanceEnCours.length} - Série ${caliState.currentSet} / 3`;
+    document.getElementById("caliExoMuscle").innerText = exo.muscles_principaux.join(" & ");
+    document.getElementById("caliExoName").innerText = exo.nom;
+    document.getElementById("caliExoVariant").innerText = exo.variante;
+    
+    const profil = userProgress[exo.famille] || { current_val: exo.base_min };
+    const volumeTxt = exo.type_effort === "temps" ? `${profil.current_val} sec` : `${profil.current_val} reps`;
+    document.getElementById("caliExoTarget").innerText = volumeTxt;
+
+    const container = document.getElementById("caliActionButtons");
+    if (caliState.currentSet < 3) {
+        container.innerHTML = `<button class="primary" onclick="validerSerie()">Terminer Série ${caliState.currentSet} (Repos 10s)</button>`;
+    } else {
+        container.innerHTML = `
+            <h4 style="text-align:center; margin-top:10px; color:var(--text-soft);">Dernière série ! Comment c'était ?</h4>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="ghost" style="color:var(--danger); border-color:var(--danger);" onclick="validerExerciceActuel('difficile')">Dur</button>
+                <button class="ghost" style="color:var(--text-main); border-color:var(--text-soft);" onclick="validerExerciceActuel('bien')">Bien</button>
+                <button class="ghost" style="color:var(--success); border-color:var(--success);" onclick="validerExerciceActuel('facile')">Facile</button>
+            </div>
+        `;
+    }
+}
+
+window.validerSerie = function() {
+    caliState.currentSet++;
+    lancerReposCali(10, false);
+};
+
+window.validerExerciceActuel = function(difficulte) {
+    const exo = seanceEnCours[caliState.currentExoIndex];
+    notesSeance[exo.nom] = difficulte;
+
+    caliState.currentExoIndex++;
+    if (caliState.currentExoIndex < seanceEnCours.length) {
+        caliState.currentSet = 1;
+        lancerReposCali(30, true);
+    } else {
+        alert("🎉 Bravo, séance terminée ! Tes résultats sont enregistrés.");
+        calculerProgressionFirebase();
+    }
+};
+
+function lancerReposCali(duree, isTransition) {
+    document.getElementById("caliActionButtons").classList.add("hidden");
+    const timerDiv = document.getElementById("caliTimerDisplay");
+    timerDiv.classList.remove("hidden");
+
+    if (isTransition) {
+        const nextExo = seanceEnCours[caliState.currentExoIndex];
+        document.getElementById("caliExoMuscle").innerText = "PRÉPARATION";
+        document.getElementById("caliExoName").innerText = "Prochain : " + nextExo.nom;
+        document.getElementById("caliExoVariant").innerText = nextExo.variante;
+        document.getElementById("caliExoTarget").innerText = "Respire !";
+    } else {
+        document.getElementById("caliExoTarget").innerText = "Repos";
+    }
+
+    let tl = duree;
+    timerDiv.innerText = tl + "s";
+    caliState.timer = setInterval(() => {
+        tl--;
+        timerDiv.innerText = tl + "s";
+        if (tl <= 0) {
+            clearInterval(caliState.timer);
+            beep(800, 300);
+            afficherExerciceActuel();
+        } else if (tl <= 3) {
+            beep(440, 150);
+        }
+    }, 1000);
+}
+
+window.quitterEntrainement = function() {
+    if(confirm("Veux-tu abandonner ?")) { clearInterval(caliState.timer); showScreen("homeScreen"); }
+};
+
+async function calculerProgressionFirebase() {
+    let messageLevelUp = "";
+    seanceEnCours.forEach(exo => {
+        let note = notesSeance[exo.nom] || "bien";
+        let state = userProgress[exo.famille] || { id_actuel: exo.id, current_val: exo.base_min, streak: 0 };
+        if (note === "facile") {
+            state.streak += 1;
+            state.current_val += (exo.type_effort === "temps" ? 5 : 2);
+            if (state.current_val >= exo.base_max && state.streak >= 5) {
+                const exoSup = catalogueExercices.find(e => e.prerequis.includes(exo.id));
+                if (exoSup) { state.id_actuel = exoSup.id; state.current_val = exoSup.base_min; state.streak = 0; messageLevelUp += `\n- ${exoSup.nom}`; } 
+                else state.current_val = exo.base_max; 
+            }
+        } else if (note === "difficile") { state.streak = 0; state.current_val = Math.max(exo.base_min, state.current_val - (exo.type_effort === "temps" ? 5 : 2)); } 
+        else state.streak = 0;
+        userProgress[exo.famille] = state;
+    });
+
+    if (messageLevelUp !== "") alert("🚀 LEVEL UP ! Débloqué :" + messageLevelUp);
+    if (currentUser) {
+        try { await db.collection("sthenos_users").doc(currentUser.uid).set({ progress: userProgress, lastWorkout: Date.now() }, { merge: true }); } 
+        catch(e) {}
+    }
+    showScreen("homeScreen");
+}
   
   // =========================================
   // --- MODULE BOXE ---
@@ -327,41 +344,60 @@ const firebaseConfig = {
       showScreen("boxingSetupScreen");
   };
   
-  window.genererApercuBoxe = function() {
-      boxeState.roundsTotal = parseInt(document.getElementById("selectRoundsBoxe").value);
-      const previewList = document.getElementById("boxingPreviewList");
-      
-      previewList.innerHTML = `
-        <div class="card" style="border-left: 4px solid var(--danger);">
-            <p style="font-weight:bold; color:var(--text-main);">🥊 ${boxeState.roundsTotal} Rounds de 5 minutes</p>
-            <p style="font-size:14px; color:var(--text-soft); margin-top:8px;">Les combos sont générés dynamiquement et dictés à voix haute. Prépare tes gants !</p>
-        </div>`;
-      
-      showScreen("boxingPreviewScreen");
-  };
+window.genererApercuBoxe = function() {
+    boxeState.roundsTotal = parseInt(document.getElementById("selectRoundsBoxe").value);
+    
+    // On génère TOUS les rounds à l'avance pour pouvoir les afficher
+    boxeState.roundsData = [];
+    for (let i = 0; i < boxeState.roundsTotal; i++) {
+        boxeState.roundsData.push(genererExercicesDuRound());
+    }
+
+    const previewList = document.getElementById("boxingPreviewList");
+    previewList.innerHTML = "";
+    
+    // On boucle sur chaque round généré pour créer son HTML
+    boxeState.roundsData.forEach((round, index) => {
+        let html = `<div class="card" style="border-left: 4px solid var(--danger); padding: 16px; margin-bottom: 12px;">`;
+        html += `<h4 style="color:var(--danger); margin-bottom: 12px; font-weight:bold;">🥊 Round ${index + 1}</h4>`;
+        
+        round.forEach(exo => {
+            html += `
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px; border-bottom: 1px dashed var(--divider); padding-bottom: 4px;">
+                <span style="font-size:14px; color:var(--text-main); font-weight:600;">${exo.combo}</span>
+                <span style="font-size:12px; color:var(--text-soft);">${exo.duree}s</span>
+            </div>`;
+        });
+        html += `</div>`;
+        previewList.innerHTML += html;
+    });
+    
+    showScreen("boxingPreviewScreen");
+};
   
-  window.lancerTimerBoxe = function() {
-      boxeState.currentRound = 1;
-      boxeState.isPaused = false;
-      preparerNouveauRound();
-      showScreen("boxingTimerScreen");
-  };
+window.lancerTimerBoxe = function() {
+    boxeState.currentRound = 1;
+    boxeState.isPaused = false;
+    preparerNouveauRound();
+    showScreen("boxingTimerScreen");
+};
   
-  function preparerNouveauRound() {
-      boxeState.exercicesDuRound = genererExercicesDuRound();
-      boxeState.currentExoIndex = 0;
-      boxeState.phase = "prep";
-      boxeState.timeLeft = 10; 
-      
-      document.getElementById("boxeRoundInfo").innerText = `Round ${boxeState.currentRound} / ${boxeState.roundsTotal}`;
-      let exoSuivant = boxeState.exercicesDuRound[0].combo;
-      document.getElementById("boxeCurrentCombo").innerText = `Dans 10s : ${exoSuivant} (${boxeState.exercicesDuRound[0].duree}s)`;
-      parler("Prépare toi. Prochain enchaînement : " + exoSuivant);
-      
-      updateBoxeUI();
-      clearInterval(boxeState.timer);
-      boxeState.timer = setInterval(tickBoxe, 1000);
-  }
+function preparerNouveauRound() {
+    // Au lieu de regénérer, on récupère le round pré-généré
+    boxeState.exercicesDuRound = boxeState.roundsData[boxeState.currentRound - 1];
+    boxeState.currentExoIndex = 0;
+    boxeState.phase = "prep";
+    boxeState.timeLeft = 10; 
+    
+    document.getElementById("boxeRoundInfo").innerText = `Round ${boxeState.currentRound} / ${boxeState.roundsTotal}`;
+    let exoSuivant = boxeState.exercicesDuRound[0].combo;
+    document.getElementById("boxeCurrentCombo").innerText = `Dans 10s : ${exoSuivant} (${boxeState.exercicesDuRound[0].duree}s)`;
+    parler("Prépare toi. Prochain enchaînement : " + exoSuivant);
+    
+    updateBoxeUI();
+    clearInterval(boxeState.timer);
+    boxeState.timer = setInterval(tickBoxe, 1000);
+}
   
   function tickBoxe() {
       if (boxeState.isPaused) return;
