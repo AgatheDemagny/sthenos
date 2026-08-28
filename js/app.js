@@ -78,7 +78,7 @@ const firebaseConfig = {
   
   window.deconnexion = () => { auth.signOut(); };
   
-  // =========================================
+ // =========================================
 // --- MODULE CALLISTHÉNIE ---
 // =========================================
 const GROUPES_MAJEURS = ["quadriceps", "fessiers", "grand dorsal", "pectoraux", "deltoïdes", "abdominaux", "triceps", "biceps"];
@@ -86,15 +86,32 @@ const ORDRE_FOCUS = ["fessiers", "grand dorsal", "quadriceps", "pectoraux", "abd
 
 let caliState = { currentExoIndex: 0, currentSet: 1, timer: null };
 
+// NOUVEAU : Fonction qui filtre les exercices strictement selon les prérequis validés
+function getExosDispos() {
+    let valides = userProgress.exercices_valides || []; // Tableau des IDs maîtrisés
+    let disposParFamille = {};
+
+    catalogueExercices.forEach(exo => {
+        // Un exercice est débloqué SEULEMENT SI tous ses prérequis sont dans le tableau 'valides'
+        let isUnlocked = exo.prerequis.every(req => valides.includes(req));
+        
+        if (isUnlocked) {
+            // On garde uniquement l'exercice avec le niveau maximum de sa famille
+            if (!disposParFamille[exo.famille] || disposParFamille[exo.famille].niveau < exo.niveau) {
+                disposParFamille[exo.famille] = exo;
+            }
+        }
+    });
+
+    return Object.values(disposParFamille);
+}
+
 window.genererApercuCallisthenie = function() {
     const dureeObjectif = parseInt(document.getElementById("selectDuree").value);
-    const nombreExosObjectif = Math.floor(dureeObjectif / 3); // 1 exo = 3 min
+    // On table sur 4 minutes par exercice (3 séries + les temps de repos)
+    const nombreExosObjectif = Math.floor(dureeObjectif / 4); 
 
-    // Filtrer les exos débloqués
-    const exosDispos = catalogueExercices.filter(exo => {
-        const profilFamille = userProgress[exo.famille] || { id_actuel: exo.famille + "_1" };
-        return exo.id === profilFamille.id_actuel;
-    });
+    const exosDispos = getExosDispos();
 
     const dernierFocus = userProgress._lastFocus || "deltoïdes"; 
     let indexDernier = ORDRE_FOCUS.indexOf(dernierFocus);
@@ -125,7 +142,6 @@ window.genererApercuCallisthenie = function() {
         if (exosFocus.length > 0) {
             seanceEnCours.push(exosFocus[Math.floor(Math.random() * exosFocus.length)]);
         } else {
-            // S'il n'y a plus de focus, on prend au hasard
             let autres = exosRestants.filter(e => !seanceEnCours.includes(e));
             if (autres.length > 0) seanceEnCours.push(autres[Math.floor(Math.random() * autres.length)]);
             else break;
@@ -182,7 +198,12 @@ function afficherExerciceActuel() {
     document.getElementById("caliExoName").innerText = exo.nom;
     document.getElementById("caliExoVariant").innerText = exo.variante;
     
-    const profil = userProgress[exo.famille] || { current_val: exo.base_min };
+    let profil = userProgress[exo.famille] || { id_actuel: exo.id, current_val: exo.base_min, streak: 0 };
+    // Sécurité: Si on vient de débloquer l'exercice, on réinitialise le volume affiché à la base minimale
+    if (profil.id_actuel !== exo.id) {
+        profil = { id_actuel: exo.id, current_val: exo.base_min, streak: 0 };
+    }
+
     const volumeTxt = exo.type_effort === "temps" ? `${profil.current_val} sec` : `${profil.current_val} reps`;
     document.getElementById("caliExoTarget").innerText = volumeTxt;
 
@@ -254,232 +275,266 @@ window.quitterEntrainement = function() {
     if(confirm("Veux-tu abandonner ?")) { clearInterval(caliState.timer); showScreen("homeScreen"); }
 };
 
+// NOUVEAU : Sauvegarde Firebase avec système de déblocage manuel via Popup
 async function calculerProgressionFirebase() {
-    let messageLevelUp = "";
-    seanceEnCours.forEach(exo => {
+    let hasNewUnlocks = false;
+    let valides = userProgress.exercices_valides || []; // Récupère le tableau des exos validés
+
+    for (let exo of seanceEnCours) {
         let note = notesSeance[exo.nom] || "bien";
         let state = userProgress[exo.famille] || { id_actuel: exo.id, current_val: exo.base_min, streak: 0 };
+        
+        // Sécurité si l'ID actuel n'est pas synchronisé
+        if (state.id_actuel !== exo.id) {
+            state = { id_actuel: exo.id, current_val: exo.base_min, streak: 0 };
+        }
+
         if (note === "facile") {
             state.streak += 1;
             state.current_val += (exo.type_effort === "temps" ? 5 : 2);
+            
+            // Atteinte du max + validation du streak de 5
             if (state.current_val >= exo.base_max && state.streak >= 5) {
-                const exoSup = catalogueExercices.find(e => e.prerequis.includes(exo.id));
-                if (exoSup) { state.id_actuel = exoSup.id; state.current_val = exoSup.base_min; state.streak = 0; messageLevelUp += `\n- ${exoSup.nom}`; } 
-                else state.current_val = exo.base_max; 
+                state.current_val = exo.base_max;
+                
+                // Si l'exercice n'a pas déjà été validé dans la grande liste
+                if (!valides.includes(exo.id)) {
+                    // On propose à l'utilisateur de valider son niveau
+                    if (confirm(`🎉 Tu maîtrises parfaitement "${exo.nom}" (${exo.variante}) !\nVeux-tu valider ce niveau définitivement pour débloquer la suite ?`)) {
+                        valides.push(exo.id);
+                        hasNewUnlocks = true;
+                    }
+                }
             }
-        } else if (note === "difficile") { state.streak = 0; state.current_val = Math.max(exo.base_min, state.current_val - (exo.type_effort === "temps" ? 5 : 2)); } 
-        else state.streak = 0;
+        } else if (note === "difficile") {
+            state.streak = 0;
+            state.current_val = Math.max(exo.base_min, state.current_val - (exo.type_effort === "temps" ? 5 : 2));
+        } else {
+            state.streak = 0;
+            state.current_val = Math.min(exo.base_max, state.current_val); // Bloque le volume au max si on ne valide pas en "facile"
+        }
+        
         userProgress[exo.famille] = state;
-    });
+    }
 
-    if (messageLevelUp !== "") alert("🚀 LEVEL UP ! Débloqué :" + messageLevelUp);
+    userProgress.exercices_valides = valides;
+
+    if (hasNewUnlocks) {
+        alert("🚀 Progression sauvegardée ! De nouveaux mouvements seront disponibles à ta prochaine séance.");
+    }
+    
     if (currentUser) {
-        try { await db.collection("sthenos_users").doc(currentUser.uid).set({ progress: userProgress, lastWorkout: Date.now() }, { merge: true }); } 
-        catch(e) {}
+        try { 
+            await db.collection("sthenos_users").doc(currentUser.uid).set({ 
+                progress: userProgress, 
+                lastWorkout: Date.now() 
+            }, { merge: true }); 
+        } 
+        catch(e) { console.error("Erreur Firebase :", e); }
     }
     showScreen("homeScreen");
 }
   
-  // =========================================
-  // --- MODULE BOXE ---
-  // =========================================
-  const MOUVEMENTS_BOXE = { J: "Jab", C: "Cross", CA: "Crochet avant", CR: "Crochet arrière", UA: "Uppercut avant", UR: "Uppercut arrière" };
-  const BURNOUTS_BOXE = [ "1-2 Non-stop 🔥", "Uppercuts continus 🔥", "Crochets continus 🔥" ];
-  
-  let boxeState = { timer: null, roundsTotal: 0, currentRound: 1, exercicesDuRound: [], currentExoIndex: 0, timeLeft: 0, phase: "prep", isPaused: false };
-  
-  function parler(texte) {
-      if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel(); 
-          let textePhonetique = texte.replace(/Jab/g, "Djab").replace(/Cross/g, "Crosse").replace(/1-2/g, "Un, Deux");
-          const msg = new SpeechSynthesisUtterance(textePhonetique);
-          msg.lang = 'fr-FR'; 
-          msg.rate = 1.1; 
-          window.speechSynthesis.speak(msg);
-      }
-  }
-  
-  function beep(frequence = 440, duree = 300) {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.frequency.value = frequence;
-      osc.connect(ctx.destination);
-      osc.start(); setTimeout(() => osc.stop(), duree);
-  }
-  
-  function genererExercicesDuRound() {
-      let tempsRestant = 300; 
-      let exercices = [];
-      const basesPossibles = [["J"], ["C"], ["J", "C"], ["CA"], ["UA"]];
-      let comboEnCours = [...basesPossibles[Math.floor(Math.random() * basesPossibles.length)]];
-      
-      let tempsBurnout = Math.random() > 0.5 ? 30 : 15;
-      let tempsACombler = tempsRestant - tempsBurnout;
-  
-      while (tempsACombler > 0) {
-          let dureesPossibles = [15, 30, 45, 60].filter(d => d <= tempsACombler);
-          let dureePhase = 60;
-          if (dureesPossibles.length > 0) {
-               dureePhase = dureesPossibles[Math.floor(Math.random() * dureesPossibles.length)];
-               if (tempsACombler > 120 && dureePhase < 45) dureePhase = 60; 
-          }
-  
-          exercices.push({ combo: comboEnCours.map(m => MOUVEMENTS_BOXE[m]).join(" + "), duree: dureePhase });
-          tempsACombler -= dureePhase;
-  
-          let lastMove = comboEnCours[comboEnCours.length - 1];
-          let isAvant = ["J", "CA", "UA"].includes(lastMove);
-          let poolAjout = isAvant ? ["C", "CR", "UR"] : ["J", "CA", "UA"];
-          let coupSuivant = poolAjout[Math.floor(Math.random() * poolAjout.length)];
-          if (Math.random() > 0.6) coupSuivant = isAvant ? "C" : "J"; 
-  
-          comboEnCours.push(coupSuivant);
-      }
-      
-      exercices.push({ combo: BURNOUTS_BOXE[Math.floor(Math.random() * BURNOUTS_BOXE.length)], duree: tempsBurnout });
-      return exercices;
-  }
-  
-  window.preparerBoxeSetup = function() {
-      showScreen("boxingSetupScreen");
-  };
-  
-window.genererApercuBoxe = function() {
-    boxeState.roundsTotal = parseInt(document.getElementById("selectRoundsBoxe").value);
-    
-    // On génère TOUS les rounds à l'avance pour pouvoir les afficher
-    boxeState.roundsData = [];
-    for (let i = 0; i < boxeState.roundsTotal; i++) {
-        boxeState.roundsData.push(genererExercicesDuRound());
-    }
+// =========================================
+// --- MODULE BOXE ---
+// =========================================
+const MOUVEMENTS_BOXE = { J: "Jab", C: "Cross", CA: "Crochet avant", CR: "Crochet arrière", UA: "Uppercut avant", UR: "Uppercut arrière" };
+const BURNOUTS_BOXE = [ "1-2 Non-stop 🔥", "Uppercuts continus 🔥", "Crochets continus 🔥" ];
 
-    const previewList = document.getElementById("boxingPreviewList");
-    previewList.innerHTML = "";
-    
-    // On boucle sur chaque round généré pour créer son HTML
-    boxeState.roundsData.forEach((round, index) => {
-        let html = `<div class="card" style="border-left: 4px solid var(--danger); padding: 16px; margin-bottom: 12px;">`;
-        html += `<h4 style="color:var(--danger); margin-bottom: 12px; font-weight:bold;">🥊 Round ${index + 1}</h4>`;
-        
-        round.forEach(exo => {
-            html += `
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px; border-bottom: 1px dashed var(--divider); padding-bottom: 4px;">
-                <span style="font-size:14px; color:var(--text-main); font-weight:600;">${exo.combo}</span>
-                <span style="font-size:12px; color:var(--text-soft);">${exo.duree}s</span>
-            </div>`;
-        });
-        html += `</div>`;
-        previewList.innerHTML += html;
-    });
-    
-    showScreen("boxingPreviewScreen");
-};
-  
-window.lancerTimerBoxe = function() {
-    boxeState.currentRound = 1;
-    boxeState.isPaused = false;
-    preparerNouveauRound();
-    showScreen("boxingTimerScreen");
-};
-  
-function preparerNouveauRound() {
-    // Au lieu de regénérer, on récupère le round pré-généré
-    boxeState.exercicesDuRound = boxeState.roundsData[boxeState.currentRound - 1];
-    boxeState.currentExoIndex = 0;
-    boxeState.phase = "prep";
-    boxeState.timeLeft = 10; 
-    
-    document.getElementById("boxeRoundInfo").innerText = `Round ${boxeState.currentRound} / ${boxeState.roundsTotal}`;
-    let exoSuivant = boxeState.exercicesDuRound[0].combo;
-    document.getElementById("boxeCurrentCombo").innerText = `Dans 10s : ${exoSuivant} (${boxeState.exercicesDuRound[0].duree}s)`;
-    parler("Prépare toi. Prochain enchaînement : " + exoSuivant);
-    
-    updateBoxeUI();
-    clearInterval(boxeState.timer);
-    boxeState.timer = setInterval(tickBoxe, 1000);
+let boxeState = { timer: null, roundsTotal: 0, currentRound: 1, exercicesDuRound: [], currentExoIndex: 0, timeLeft: 0, phase: "prep", isPaused: false };
+
+function parler(texte) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); 
+        let textePhonetique = texte.replace(/Jab/g, "Djab").replace(/Cross/g, "Crosse").replace(/1-2/g, "Un, Deux");
+        const msg = new SpeechSynthesisUtterance(textePhonetique);
+        msg.lang = 'fr-FR'; 
+        msg.rate = 1.1; 
+        window.speechSynthesis.speak(msg);
+    }
 }
-  
-  function tickBoxe() {
-      if (boxeState.isPaused) return;
-      boxeState.timeLeft--;
-  
-      if (boxeState.timeLeft <= 0) {
-          changerPhaseBoxe();
-      } else if (boxeState.timeLeft <= 3) {
-          beep(800, 200); 
-      }
-      updateBoxeUI();
-  }
-  
-  function changerPhaseBoxe() {
-      if (boxeState.phase === "prep") {
-          boxeState.phase = "work";
-          let exoEnCours = boxeState.exercicesDuRound[boxeState.currentExoIndex];
-          boxeState.timeLeft = exoEnCours.duree;
-          beep(1200, 500);
-          document.getElementById("boxeCurrentCombo").innerText = exoEnCours.combo;
-          
-      } else if (boxeState.phase === "work") {
-          boxeState.currentExoIndex++;
-          
-          if (boxeState.currentExoIndex >= boxeState.exercicesDuRound.length) {
-              boxeState.phase = "rest";
-              boxeState.timeLeft = 60;
-              beep(600, 800);
-              document.getElementById("boxeCurrentCombo").innerText = "Respire et bois de l'eau !";
-              parler("Fin du round. Repos d'une minute.");
-          } else {
-              boxeState.phase = "prep";
-              boxeState.timeLeft = 10;
-              beep(600, 500);
-              let exoSuivant = boxeState.exercicesDuRound[boxeState.currentExoIndex];
-              document.getElementById("boxeCurrentCombo").innerText = `Repos. Ensuite : ${exoSuivant.combo} (${exoSuivant.duree}s)`;
-              parler("Relâche. Prochain : " + exoSuivant.combo);
-          }
-          
-      } else if (boxeState.phase === "rest") {
-          boxeState.currentRound++;
-          if (boxeState.currentRound > boxeState.roundsTotal) {
-              terminerBoxe(true);
-          } else {
-              preparerNouveauRound();
-          }
-      }
-  }
-  
-  function updateBoxeUI() {
-      const m = String(Math.floor(boxeState.timeLeft / 60)).padStart(2, '0');
-      const s = String(boxeState.timeLeft % 60).padStart(2, '0');
-      document.getElementById("boxeTimerDisplay").innerText = `${m}:${s}`;
-      
-      const badge = document.getElementById("boxePhaseIndicator");
-      if (boxeState.phase === "work") {
-          badge.innerText = "🥊 FRAPPE !";
-          badge.style.background = "var(--danger)";
-      } else if (boxeState.phase === "prep") {
-          let totalExos = boxeState.exercicesDuRound.length;
-          badge.innerText = `⏱️ PRÉPARATION (${boxeState.currentExoIndex + 1}/${totalExos})`;
-          badge.style.background = "var(--primary)";
-      } else {
-          badge.innerText = "💧 REPOS COMPLET";
-          badge.style.background = "var(--success)";
-      }
-  }
-  
-  window.togglePauseBoxe = function() {
-      boxeState.isPaused = !boxeState.isPaused;
-      document.getElementById("btnPauseBoxe").innerText = boxeState.isPaused ? "▶️ Reprendre" : "⏸️ Pause";
-  };
-  
-  window.quitterBoxe = function() {
-      if (confirm("Voulez-vous vraiment arrêter la séance de boxe ?")) {
-          terminerBoxe(false);
-      }
-  };
-  
-  function terminerBoxe(completed = true) {
-      clearInterval(boxeState.timer);
-      window.speechSynthesis.cancel();
-      if (completed) alert("🎉 Séance de boxe terminée ! Bien joué !");
-      showScreen("homeScreen");
-  }
+
+function beep(frequence = 440, duree = 300) {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    osc.frequency.value = frequence;
+    osc.connect(ctx.destination);
+    osc.start(); setTimeout(() => osc.stop(), duree);
+}
+
+function genererExercicesDuRound() {
+    let tempsRestant = 300; 
+    let exercices = [];
+    const basesPossibles = [["J"], ["C"], ["J", "C"], ["CA"], ["UA"]];
+    let comboEnCours = [...basesPossibles[Math.floor(Math.random() * basesPossibles.length)]];
+    
+    let tempsBurnout = Math.random() > 0.5 ? 30 : 15;
+    let tempsACombler = tempsRestant - tempsBurnout;
+
+    while (tempsACombler > 0) {
+        let dureesPossibles = [15, 30, 45, 60].filter(d => d <= tempsACombler);
+        let dureePhase = 60;
+        if (dureesPossibles.length > 0) {
+            dureePhase = dureesPossibles[Math.floor(Math.random() * dureesPossibles.length)];
+            if (tempsACombler > 120 && dureePhase < 45) dureePhase = 60; 
+        }
+
+        exercices.push({ combo: comboEnCours.map(m => MOUVEMENTS_BOXE[m]).join(" + "), duree: dureePhase });
+        tempsACombler -= dureePhase;
+
+        let lastMove = comboEnCours[comboEnCours.length - 1];
+        let isAvant = ["J", "CA", "UA"].includes(lastMove);
+        let poolAjout = isAvant ? ["C", "CR", "UR"] : ["J", "CA", "UA"];
+        let coupSuivant = poolAjout[Math.floor(Math.random() * poolAjout.length)];
+        if (Math.random() > 0.6) coupSuivant = isAvant ? "C" : "J"; 
+
+        comboEnCours.push(coupSuivant);
+    }
+    
+    exercices.push({ combo: BURNOUTS_BOXE[Math.floor(Math.random() * BURNOUTS_BOXE.length)], duree: tempsBurnout });
+    return exercices;
+}
+
+window.preparerBoxeSetup = function() {
+    showScreen("boxingSetupScreen");
+};
+
+window.genererApercuBoxe = function() {
+boxeState.roundsTotal = parseInt(document.getElementById("selectRoundsBoxe").value);
+
+// On génère TOUS les rounds à l'avance pour pouvoir les afficher
+boxeState.roundsData = [];
+for (let i = 0; i < boxeState.roundsTotal; i++) {
+    boxeState.roundsData.push(genererExercicesDuRound());
+}
+
+const previewList = document.getElementById("boxingPreviewList");
+previewList.innerHTML = "";
+
+// On boucle sur chaque round généré pour créer son HTML
+boxeState.roundsData.forEach((round, index) => {
+    let html = `<div class="card" style="border-left: 4px solid var(--danger); padding: 16px; margin-bottom: 12px;">`;
+    html += `<h4 style="color:var(--danger); margin-bottom: 12px; font-weight:bold;">🥊 Round ${index + 1}</h4>`;
+    
+    round.forEach(exo => {
+        html += `
+        <div style="display:flex; justify-content:space-between; margin-bottom: 8px; border-bottom: 1px dashed var(--divider); padding-bottom: 4px;">
+            <span style="font-size:14px; color:var(--text-main); font-weight:600;">${exo.combo}</span>
+            <span style="font-size:12px; color:var(--text-soft);">${exo.duree}s</span>
+        </div>`;
+    });
+    html += `</div>`;
+    previewList.innerHTML += html;
+});
+
+showScreen("boxingPreviewScreen");
+};
+
+window.lancerTimerBoxe = function() {
+boxeState.currentRound = 1;
+boxeState.isPaused = false;
+preparerNouveauRound();
+showScreen("boxingTimerScreen");
+};
+
+function preparerNouveauRound() {
+// Au lieu de regénérer, on récupère le round pré-généré
+boxeState.exercicesDuRound = boxeState.roundsData[boxeState.currentRound - 1];
+boxeState.currentExoIndex = 0;
+boxeState.phase = "prep";
+boxeState.timeLeft = 10; 
+
+document.getElementById("boxeRoundInfo").innerText = `Round ${boxeState.currentRound} / ${boxeState.roundsTotal}`;
+let exoSuivant = boxeState.exercicesDuRound[0].combo;
+document.getElementById("boxeCurrentCombo").innerText = `Dans 10s : ${exoSuivant} (${boxeState.exercicesDuRound[0].duree}s)`;
+parler("Prépare toi. Prochain enchaînement : " + exoSuivant);
+
+updateBoxeUI();
+clearInterval(boxeState.timer);
+boxeState.timer = setInterval(tickBoxe, 1000);
+}
+
+function tickBoxe() {
+    if (boxeState.isPaused) return;
+    boxeState.timeLeft--;
+
+    if (boxeState.timeLeft <= 0) {
+        changerPhaseBoxe();
+    } else if (boxeState.timeLeft <= 3) {
+        beep(800, 200); 
+    }
+    updateBoxeUI();
+}
+
+function changerPhaseBoxe() {
+    if (boxeState.phase === "prep") {
+        boxeState.phase = "work";
+        let exoEnCours = boxeState.exercicesDuRound[boxeState.currentExoIndex];
+        boxeState.timeLeft = exoEnCours.duree;
+        beep(1200, 500);
+        document.getElementById("boxeCurrentCombo").innerText = exoEnCours.combo;
+        
+    } else if (boxeState.phase === "work") {
+        boxeState.currentExoIndex++;
+        
+        if (boxeState.currentExoIndex >= boxeState.exercicesDuRound.length) {
+            boxeState.phase = "rest";
+            boxeState.timeLeft = 60;
+            beep(600, 800);
+            document.getElementById("boxeCurrentCombo").innerText = "Respire et bois de l'eau !";
+            parler("Fin du round. Repos d'une minute.");
+        } else {
+            boxeState.phase = "prep";
+            boxeState.timeLeft = 10;
+            beep(600, 500);
+            let exoSuivant = boxeState.exercicesDuRound[boxeState.currentExoIndex];
+            document.getElementById("boxeCurrentCombo").innerText = `Repos. Ensuite : ${exoSuivant.combo} (${exoSuivant.duree}s)`;
+            parler("Relâche. Prochain : " + exoSuivant.combo);
+        }
+        
+    } else if (boxeState.phase === "rest") {
+        boxeState.currentRound++;
+        if (boxeState.currentRound > boxeState.roundsTotal) {
+            terminerBoxe(true);
+        } else {
+            preparerNouveauRound();
+        }
+    }
+}
+
+function updateBoxeUI() {
+    const m = String(Math.floor(boxeState.timeLeft / 60)).padStart(2, '0');
+    const s = String(boxeState.timeLeft % 60).padStart(2, '0');
+    document.getElementById("boxeTimerDisplay").innerText = `${m}:${s}`;
+    
+    const badge = document.getElementById("boxePhaseIndicator");
+    if (boxeState.phase === "work") {
+        badge.innerText = "🥊 FRAPPE !";
+        badge.style.background = "var(--danger)";
+    } else if (boxeState.phase === "prep") {
+        let totalExos = boxeState.exercicesDuRound.length;
+        badge.innerText = `⏱️ PRÉPARATION (${boxeState.currentExoIndex + 1}/${totalExos})`;
+        badge.style.background = "var(--primary)";
+    } else {
+        badge.innerText = "💧 REPOS COMPLET";
+        badge.style.background = "var(--success)";
+    }
+}
+
+window.togglePauseBoxe = function() {
+    boxeState.isPaused = !boxeState.isPaused;
+    document.getElementById("btnPauseBoxe").innerText = boxeState.isPaused ? "▶️ Reprendre" : "⏸️ Pause";
+};
+
+window.quitterBoxe = function() {
+    if (confirm("Voulez-vous vraiment arrêter la séance de boxe ?")) {
+        terminerBoxe(false);
+    }
+};
+
+function terminerBoxe(completed = true) {
+    clearInterval(boxeState.timer);
+    window.speechSynthesis.cancel();
+    if (completed) alert("🎉 Séance de boxe terminée ! Bien joué !");
+    showScreen("homeScreen");
+}
