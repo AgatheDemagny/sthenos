@@ -21,14 +21,19 @@ let modeCircuit = false;
 let currentUser = null;
 
 // Gestion des écrans
+// Gestion universelle des écrans
 function showScreen(screenId) {
-    document.getElementById("loadingScreen").classList.add("hidden");
-    document.getElementById("loginScreen").classList.add("hidden");
-    document.getElementById("homeScreen").classList.add("hidden");
-    document.getElementById("workoutScreen").classList.add("hidden");
-    document.getElementById("feedbackScreen").classList.add("hidden");
-    document.getElementById(screenId).classList.remove("hidden");
-    window.scrollTo(0,0);
+    // 1. On masque absolument toutes les <section> de la page
+    const screens = document.querySelectorAll("section");
+    screens.forEach(screen => screen.classList.add("hidden"));
+    
+    // 2. On affiche uniquement celle demandée
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.remove("hidden");
+    }
+    
+    window.scrollTo(0, 0);
 }
 
 // Initialisation au chargement de la page
